@@ -1,0 +1,78 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Midnight MASS Contributors
+//
+// Midnight MASS (Milestone & Audit Shielded Settlement Protocol)
+// A privacy-first protocol for confidential milestone escrow and
+// zero-knowledge proof of track record under NDA.
+
+module MidnightMass {
+
+    // ------------------------------------------------------------------------
+    // Public Ledger State
+    // ------------------------------------------------------------------------
+    // Only aggregate counters, commitment roots, and explicitly disclosed
+    // verification receipts reside on the public ledger.
+    ledger {
+        // Global protocol metrics
+        totalEscrowsCreated: Counter;
+        totalSettledMilestones: Counter;
+        totalVolumeShieldedTier: Counter;
+        totalTrackRecordsVerified: Counter;
+
+        // Escrow state mapped by unique Escrow Commitment ID
+        // Escrow Commitment = H(clientPkHash, auditorPkHash, amountShielded, specHash, salt)
+        // Value: 0 = Uninitialized, 1 = Active, 2 = Settled, 3 = Disputed, 4 = Refunded
+        escrowStates: Map<Field, Uint32>;
+
+        // Verified selective disclosure registry
+        // Maps Auditor Public Hash -> Packed Proof Receipt (Verification timestamp + Score Tier)
+        verifiedAuditorProofs: Map<Field, Field>;
+    }
+
+    // ------------------------------------------------------------------------
+    // Enums and Constants
+    // ------------------------------------------------------------------------
+    enum EscrowStatus {
+        UNINITIALIZED = 0,
+        ACTIVE = 1,
+        SETTLED = 2,
+        DISPUTED = 3,
+        REFUNDED = 4
+    }
+
+    enum AuditDomain {
+        ALL_DOMAINS = 0,
+        SMART_CONTRACT_SECURITY = 1,
+        CRYPTOGRAPHIC_CIRCUITS = 2,
+        AI_MODEL_ALIGNMENT = 3,
+        ENTERPRISE_CONSULTING = 4
+    }
+
+    // ------------------------------------------------------------------------
+    // Structs for Private Witnesses (Evaluated strictly on-device)
+    // ------------------------------------------------------------------------
+    struct EscrowTerms {
+        clientPkHash: Field;
+        auditorPkHash: Field;
+        milestoneAmount: Uint64;
+        specHash: Field;        // SHA-256 of confidential deliverables spec
+        salt: Field;
+    }
+
+    struct ProjectWitness {
+        projectId: Field;
+        domain: Uint32;         // AuditDomain
+        qualityScore: Uint32;   // Scaled rating (e.g., 98/100)
+        volumeTier: Uint32;     // 1 = $10k-$50k, 2 = $50k-$200k, 3 = $200k+
+        clientProofSig: Field;  // Cryptographic endorsement from sponsor
+        settled: Boolean;
+    }
+
+    struct ReputationThreshold {
+        minProjectCount: Uint32;
+        minAverageScore: Uint32; // Scaled (e.g. 90+)
+        minVolumeTier: Uint32;
+        requiredDomain: Uint32;
+    }
+
+}
