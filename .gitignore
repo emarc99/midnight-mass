@@ -28,3 +28,4 @@ Thumbs.db
 .snowflake/
 .v0-trash/
 __v0_*
+.vercel
