@@ -1,57 +1,72 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2026 Midnight MASS Contributors
 #
-# Docker Compose orchestration for Midnight Undeployed Local Development Stack
-# Provides Node (9944), Indexer (8088), and Proof Server (6300).
-
-version: '3.8'
+# Midnight Undeployed Local Development Stack
+# Official Midnight Node (9944), Standalone Indexer (8088), and Proof Server (6300)
 
 services:
-  # Midnight Substrate-based Validator Node
-  midnight-node:
-    image: ghcr.io/midnight-ntwrk/midnight-node:latest
-    container_name: mass-midnight-node
-    restart: unless-stopped
+  proof-server:
+    container_name: 'midnight-proof-server'
+    image: 'midnightntwrk/proof-server:8.1.0'
+    command: ['midnight-proof-server', '-v']
     ports:
-      - "9944:9944"
-      - "30333:30333"
-    command:
-      - "--dev"
-      - "--ws-external"
-      - "--rpc-external"
-      - "--rpc-cors=all"
-      - "--alice"
+      - '127.0.0.1:6300:6300'
     environment:
-      - RUST_LOG=info
+      RUST_BACKTRACE: 'full'
+    healthcheck:
+      test: ['CMD-SHELL', 'echo > /dev/tcp/127.0.0.1/6300']
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
     networks:
       - midnight-local
 
-  # Midnight GraphQL Indexer Service
-  midnight-indexer:
-    image: ghcr.io/midnight-ntwrk/midnight-indexer:latest
-    container_name: mass-midnight-indexer
-    restart: unless-stopped
+  indexer:
+    container_name: 'midnight-indexer'
+    image: 'midnightntwrk/indexer-standalone:4.3.3'
+    ports:
+      - '127.0.0.1:8088:8088'
+    environment:
+      RUST_LOG: 'indexer=info,chain_indexer=info,indexer_api=info,wallet_indexer=info,indexer_common=info,fastrace_opentelemetry=off,info'
+      APP__INFRA__NODE__URL: 'ws://node:9944'
+      APP__APPLICATION__NETWORK_ID: 'undeployed'
+      APP__INFRA__STORAGE__PASSWORD: 'indexer'
+      APP__INFRA__PUB_SUB__PASSWORD: 'indexer'
+      APP__INFRA__LEDGER_STATE_STORAGE__PASSWORD: 'indexer'
+      APP__INFRA__SECRET: '303132333435363738393031323334353637383930313233343536373839303132'
+      APP__INFRA__SPO_NODE__URL: 'ws://node:9944'
+      APP__INFRA__SPO_NODE__BLOCKFROST_ID: 'e2e-test-dummy-id'
+    healthcheck:
+      test: ['CMD-SHELL', 'cat /var/run/indexer-standalone/running']
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
     depends_on:
-      - midnight-node
-    ports:
-      - "8088:8088"
-    environment:
-      - NODE_WS_ENDPOINT=ws://midnight-node:9944
-      - PORT=8088
-      - LOG_LEVEL=info
+      node:
+        condition: service_healthy
     networks:
       - midnight-local
 
-  # Local Halo 2 Proof Server (generates SNARKs without sending keys off-device)
-  midnight-proof-server:
-    image: ghcr.io/midnight-ntwrk/proof-server:latest
-    container_name: mass-proof-server
-    restart: unless-stopped
+  node:
+    image: 'midnightntwrk/midnight-node:1.0.0'
+    container_name: 'midnight-node'
     ports:
-      - "6300:6300"
+      - '127.0.0.1:9944:9944'
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'curl -sf -X POST -H "Content-Type: application/json" -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"chain_getBlockHash\",\"params\":[1]}" http://localhost:9944 | grep -q "\"result\":\"0x"',
+        ]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
     environment:
-      - PORT=6300
-      - LOG_LEVEL=info
+      CFG_PRESET: 'dev'
+      SIDECHAIN_BLOCK_BENEFICIARY: '04bcf7ad3be7a5c790460be82a713af570f22e0f801f6659ab8e84a52be6969e'
     networks:
       - midnight-local
 
