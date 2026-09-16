@@ -1,0 +1,60 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Midnight MASS Contributors
+#
+# Docker Compose orchestration for Midnight Undeployed Local Development Stack
+# Provides Node (9944), Indexer (8088), and Proof Server (6300).
+
+version: '3.8'
+
+services:
+  # Midnight Substrate-based Validator Node
+  midnight-node:
+    image: ghcr.io/midnight-ntwrk/midnight-node:latest
+    container_name: mass-midnight-node
+    restart: unless-stopped
+    ports:
+      - "9944:9944"
+      - "30333:30333"
+    command:
+      - "--dev"
+      - "--ws-external"
+      - "--rpc-external"
+      - "--rpc-cors=all"
+      - "--alice"
+    environment:
+      - RUST_LOG=info
+    networks:
+      - midnight-local
+
+  # Midnight GraphQL Indexer Service
+  midnight-indexer:
+    image: ghcr.io/midnight-ntwrk/midnight-indexer:latest
+    container_name: mass-midnight-indexer
+    restart: unless-stopped
+    depends_on:
+      - midnight-node
+    ports:
+      - "8088:8088"
+    environment:
+      - NODE_WS_ENDPOINT=ws://midnight-node:9944
+      - PORT=8088
+      - LOG_LEVEL=info
+    networks:
+      - midnight-local
+
+  # Local Halo 2 Proof Server (generates SNARKs without sending keys off-device)
+  midnight-proof-server:
+    image: ghcr.io/midnight-ntwrk/proof-server:latest
+    container_name: mass-proof-server
+    restart: unless-stopped
+    ports:
+      - "6300:6300"
+    environment:
+      - PORT=6300
+      - LOG_LEVEL=info
+    networks:
+      - midnight-local
+
+networks:
+  midnight-local:
+    driver: bridge
