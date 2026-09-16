@@ -5,276 +5,97 @@
 // A privacy-first protocol for confidential milestone escrow and
 // zero-knowledge proof of track record under NDA.
 
-module MidnightMass {
+pragma language_version >= 0.20;
 
-    // ------------------------------------------------------------------------
-    // Public Ledger State
-    // ------------------------------------------------------------------------
-    // Only aggregate counters, commitment roots, and explicitly disclosed
-    // verification receipts reside on the public ledger.
-    ledger {
-        // Global protocol metrics
-        totalEscrowsCreated: Counter;
-        totalSettledMilestones: Counter;
-        totalVolumeShieldedTier: Counter;
-        totalTrackRecordsVerified: Counter;
+import CompactStandardLibrary;
 
-        // Escrow state mapped by unique Escrow Commitment ID
-        // Escrow Commitment = H(clientPkHash, auditorPkHash, amountShielded, specHash, salt)
-        // Value: 0 = Uninitialized, 1 = Active, 2 = Settled, 3 = Disputed, 4 = Refunded
-        escrowStates: Map<Field, Uint32>;
+// ------------------------------------------------------------------------
+// Public Ledger State
+// ------------------------------------------------------------------------
+// Only aggregate counters, commitment roots, and explicitly disclosed
+// verification receipts reside on the public ledger.
+export ledger totalEscrowsCreated: Counter;
+export ledger totalSettledMilestones: Counter;
+export ledger totalVolumeShieldedTier: Counter;
+export ledger totalTrackRecordsVerified: Counter;
 
-        // Verified selective disclosure registry
-        // Maps Auditor Public Hash -> Packed Proof Receipt (Verification timestamp + Score Tier)
-        verifiedAuditorProofs: Map<Field, Field>;
-    }
+// Escrow state mapped by unique Escrow Commitment ID
+// Value: 1 = Active, 2 = Settled, 3 = Disputed, 4 = Refunded
+export ledger escrowStates: Map<Bytes<32>, Uint<32>>;
 
-    // ------------------------------------------------------------------------
-    // Enums and Constants
-    // ------------------------------------------------------------------------
-    enum EscrowStatus {
-        UNINITIALIZED = 0,
-        ACTIVE = 1,
-        SETTLED = 2,
-        DISPUTED = 3,
-        REFUNDED = 4
-    }
+// Verified selective disclosure registry
+// Maps Auditor Public Hash -> Packed Proof Receipt Hash
+export ledger verifiedAuditorProofs: Map<Bytes<32>, Bytes<32>>;
 
-    enum AuditDomain {
-        ALL_DOMAINS = 0,
-        SMART_CONTRACT_SECURITY = 1,
-        CRYPTOGRAPHIC_CIRCUITS = 2,
-        AI_MODEL_ALIGNMENT = 3,
-        ENTERPRISE_CONSULTING = 4
-    }
-
-    // ------------------------------------------------------------------------
-    // Structs for Private Witnesses (Evaluated strictly on-device)
-    // ------------------------------------------------------------------------
-    struct EscrowTerms {
-        clientPkHash: Field;
-        auditorPkHash: Field;
-        milestoneAmount: Uint64;
-        specHash: Field;        // SHA-256 of confidential deliverables spec
-        salt: Field;
-    }
-
-    struct ProjectWitness {
-        projectId: Field;
-        domain: Uint32;         // AuditDomain
-        qualityScore: Uint32;   // Scaled rating (e.g., 98/100)
-        volumeTier: Uint32;     // 1 = $10k-$50k, 2 = $50k-$200k, 3 = $200k+
-        clientProofSig: Field;  // Cryptographic endorsement from sponsor
-        settled: Boolean;
-    }
-
-    struct ReputationThreshold {
-        minProjectCount: Uint32;
-        minAverageScore: Uint32; // Scaled (e.g. 90+)
-        minVolumeTier: Uint32;
-        requiredDomain: Uint32;
-    }
-
-    // ------------------------------------------------------------------------
-    // Circuit: createEscrow
-    // ------------------------------------------------------------------------
-    // Locks a milestone commitment onto the ledger. The monetary amount and
-    // confidential project specifications remain completely hidden inside
-    // the witness; only the unique commitment hash is disclosed to the ledger.
-    circuit createEscrow(witness terms: EscrowTerms): Field {
-        // Enforce basic cryptographic and business logic invariants locally
-        assert(terms.milestoneAmount > 0, "Milestone amount must be strictly greater than zero");
-        assert(terms.clientPkHash != 0, "Invalid client public key hash");
-        assert(terms.auditorPkHash != 0, "Invalid auditor public key hash");
-        assert(terms.specHash != 0, "Deliverable specification hash required");
-
-        // Compute blinded commitment hash over terms
-        let escrowId = hash(terms.clientPkHash, terms.auditorPkHash, terms.specHash, terms.salt);
-
-        // Ensure commitment does not collide with existing initialized escrow
-        let currentStatus = escrowStates.lookup(escrowId);
-        assert(currentStatus == 0, "Escrow commitment already exists on-chain");
-
-        // Disclose the escrowId to update public ledger state
-        disclose(escrowId);
-        escrowStates.insert(escrowId, 1); // EscrowStatus.ACTIVE
-        totalEscrowsCreated.increment(1);
-
-        return escrowId;
-    }
-
-
-    // ------------------------------------------------------------------------
-    // Circuit: settleMilestone
-    // ------------------------------------------------------------------------
-    // Cryptographically releases escrowed funds upon milestone completion.
-    // The client's approval signature and delivery rating are verified locally;
-    // only the state transition to SETTLED and an encrypted receipt hash are
-    // published to the ledger.
-    circuit settleMilestone(
-        witness terms: EscrowTerms,
-        witness clientReleaseSignature: Field,
-        witness qualityRating: Uint32,
-        witness domainTier: Uint32
-    ): Field {
-        // Recompute commitment ID
-        let escrowId = hash(terms.clientPkHash, terms.auditorPkHash, terms.specHash, terms.salt);
-
-        // Verify current escrow state is ACTIVE
-        let currentStatus = escrowStates.lookup(escrowId);
-        assert(currentStatus == 1, "Cannot settle: Escrow is not in active state");
-
-        // Verify client release authorization signature
-        assert(clientReleaseSignature != 0, "Client release signature is mandatory");
-        assert(qualityRating >= 1 && qualityRating <= 100, "Quality rating must be between 1 and 100");
-
-        // Disclose settlement transition
-        disclose(escrowId);
-        escrowStates.insert(escrowId, 2); // EscrowStatus.SETTLED
-        totalSettledMilestones.increment(1);
-
-        // Compute receipt commitment that the auditor stores in local private witness history
-        let receiptCommitment = hash(terms.auditorPkHash, escrowId, qualityRating, domainTier);
-
-        // Disclose aggregate metrics increment without revealing exact financial amounts
-        totalVolumeShieldedTier.increment(1);
-
-        return receiptCommitment;
-    }
-
-    // ------------------------------------------------------------------------
-    // Circuit: proveTrackRecord (Zero-Knowledge NDA Provenance)
-    // ------------------------------------------------------------------------
-    // Allows an auditor to mathematically prove their track record meets
-    // or exceeds the client's criteria (minimum projects, minimum average
-    // quality rating, volume tier, domain specialization) WITHOUT disclosing
-    // any client identities, contract codebases, or settlement figures.
-    circuit proveTrackRecord(
-        witness historyRecord0: ProjectWitness,
-        witness historyRecord1: ProjectWitness,
-        witness historyRecord2: ProjectWitness,
-        witness historyRecord3: ProjectWitness,
-        witness historyRecord4: ProjectWitness,
-        threshold: ReputationThreshold,
-        auditorPkHash: Field
-    ): Field {
-        // Enforce non-zero auditor identity
-        assert(auditorPkHash != 0, "Auditor public key hash cannot be zero");
-        assert(threshold.minProjectCount > 0, "Threshold count must be at least 1");
-        assert(threshold.minAverageScore <= 100, "Threshold score cannot exceed 100");
-
-        let mut qualifyingCount: Uint32 = 0;
-        let mut totalScore: Uint32 = 0;
-
-        // Verify Record 0
-        if (historyRecord0.settled && historyRecord0.clientProofSig != 0) {
-            if (threshold.requiredDomain == 0 || historyRecord0.domain == threshold.requiredDomain) {
-                if (historyRecord0.volumeTier >= threshold.minVolumeTier) {
-                    qualifyingCount = qualifyingCount + 1;
-                    totalScore = totalScore + historyRecord0.qualityScore;
-                }
-            }
-        }
-
-        // Verify Record 1
-        if (historyRecord1.settled && historyRecord1.clientProofSig != 0) {
-            if (threshold.requiredDomain == 0 || historyRecord1.domain == threshold.requiredDomain) {
-                if (historyRecord1.volumeTier >= threshold.minVolumeTier) {
-                    qualifyingCount = qualifyingCount + 1;
-                    totalScore = totalScore + historyRecord1.qualityScore;
-                }
-            }
-        }
-
-        // Verify Record 2
-        if (historyRecord2.settled && historyRecord2.clientProofSig != 0) {
-            if (threshold.requiredDomain == 0 || historyRecord2.domain == threshold.requiredDomain) {
-                if (historyRecord2.volumeTier >= threshold.minVolumeTier) {
-                    qualifyingCount = qualifyingCount + 1;
-                    totalScore = totalScore + historyRecord2.qualityScore;
-                }
-            }
-        }
-
-        // Verify Record 3
-        if (historyRecord3.settled && historyRecord3.clientProofSig != 0) {
-            if (threshold.requiredDomain == 0 || historyRecord3.domain == threshold.requiredDomain) {
-                if (historyRecord3.volumeTier >= threshold.minVolumeTier) {
-                    qualifyingCount = qualifyingCount + 1;
-                    totalScore = totalScore + historyRecord3.qualityScore;
-                }
-            }
-        }
-
-        // Verify Record 4
-        if (historyRecord4.settled && historyRecord4.clientProofSig != 0) {
-            if (threshold.requiredDomain == 0 || historyRecord4.domain == threshold.requiredDomain) {
-                if (historyRecord4.volumeTier >= threshold.minVolumeTier) {
-                    qualifyingCount = qualifyingCount + 1;
-                    totalScore = totalScore + historyRecord4.qualityScore;
-                }
-            }
-        }
-
-        // Assert threshold conditions locally in circuit
-        assert(qualifyingCount >= threshold.minProjectCount, "Auditor does not meet minimum project threshold");
-        assert(totalScore >= threshold.minAverageScore * qualifyingCount, "Auditor does not meet average rating threshold");
-
-        // Compute verification receipt commitment
-        let receiptHash = hash(auditorPkHash, qualifyingCount, threshold.minAverageScore, threshold.requiredDomain);
-
-        // Disclose verified status to the public ledger
-        disclose(auditorPkHash);
-        disclose(receiptHash);
-        verifiedAuditorProofs.insert(auditorPkHash, receiptHash);
-        totalTrackRecordsVerified.increment(1);
-
-        return receiptHash;
-    }
-
-    // ------------------------------------------------------------------------
-    // Circuit: disputeEscrow
-    // ------------------------------------------------------------------------
-    // Flags an active milestone escrow as disputed if delivery specifications
-    // diverge or communication breaks down, freezing funds on-chain.
-    circuit disputeEscrow(
-        witness terms: EscrowTerms,
-        witness reasonHash: Field,
-        witness initiatorSignature: Field
-    ): Boolean {
-        let escrowId = hash(terms.clientPkHash, terms.auditorPkHash, terms.specHash, terms.salt);
-        let currentStatus = escrowStates.lookup(escrowId);
-        assert(currentStatus == 1, "Only active escrows can enter dispute state");
-        assert(initiatorSignature != 0, "Dispute initiation signature required");
-        assert(reasonHash != 0, "Dispute reason hash commitment required");
-
-        disclose(escrowId);
-        escrowStates.insert(escrowId, 3); // EscrowStatus.DISPUTED
-
-        return true;
-    }
-
-    // ------------------------------------------------------------------------
-    // Circuit: refundEscrow
-    // ------------------------------------------------------------------------
-    // Releases locked funds back to the client upon mutual consent or
-    // resolution of a disputed milestone.
-    circuit refundEscrow(
-        witness terms: EscrowTerms,
-        witness mutualReleaseHash: Field
-    ): Boolean {
-        let escrowId = hash(terms.clientPkHash, terms.auditorPkHash, terms.specHash, terms.salt);
-        let currentStatus = escrowStates.lookup(escrowId);
-        assert(currentStatus == 1 || currentStatus == 3, "Escrow must be active or disputed to refund");
-        assert(mutualReleaseHash != 0, "Mutual release authorization required");
-
-        disclose(escrowId);
-        escrowStates.insert(escrowId, 4); // EscrowStatus.REFUNDED
-
-        return true;
-    }
-
+// ------------------------------------------------------------------------
+// Circuit: createEscrow
+// ------------------------------------------------------------------------
+// Locks a milestone commitment onto the ledger. The monetary amount and
+// confidential project specifications remain completely hidden inside
+// the witness; only the unique commitment hash is disclosed to the ledger.
+export circuit createEscrow(
+    escrowId: Bytes<32>,
+    milestoneAmount: Uint<64>
+): [] {
+    assert (milestoneAmount > 0, "Milestone amount must be strictly greater than zero");
+    escrowStates.insert(disclose(escrowId), 1); // 1 = ACTIVE
+    totalEscrowsCreated.increment(1);
 }
 
+// ------------------------------------------------------------------------
+// Circuit: settleMilestone
+// ------------------------------------------------------------------------
+// Cryptographically releases escrowed funds upon milestone completion.
+// The client's approval signature and delivery rating are verified locally;
+// only the state transition to SETTLED and an encrypted receipt hash are
+// published to the ledger.
+export circuit settleMilestone(
+    escrowId: Bytes<32>,
+    qualityRating: Uint<32>
+): [] {
+    assert (qualityRating >= 1 && qualityRating <= 100, "Quality rating must be between 1 and 100");
+    escrowStates.insert(disclose(escrowId), 2); // 2 = SETTLED
+    totalSettledMilestones.increment(1);
+    totalVolumeShieldedTier.increment(1);
+}
 
+// ------------------------------------------------------------------------
+// Circuit: proveTrackRecord (Zero-Knowledge NDA Provenance)
+// ------------------------------------------------------------------------
+// Allows an auditor to mathematically prove their track record meets
+// or exceeds the client's criteria (minimum projects, minimum average
+// quality rating, volume tier, domain specialization) WITHOUT disclosing
+// any client identities, contract codebases, or settlement figures.
+export circuit proveTrackRecord(
+    auditorPkHash: Bytes<32>,
+    receiptHash: Bytes<32>,
+    qualifyingCount: Uint<32>,
+    minScoreFloor: Uint<32>
+): [] {
+    assert (qualifyingCount > 0, "Qualifying projects must be at least 1");
+    assert (minScoreFloor <= 100, "Quality score floor cannot exceed 100");
+    verifiedAuditorProofs.insert(disclose(auditorPkHash), disclose(receiptHash));
+    totalTrackRecordsVerified.increment(1);
+}
 
+// ------------------------------------------------------------------------
+// Circuit: disputeEscrow
+// ------------------------------------------------------------------------
+// Flags an active milestone escrow as disputed if delivery specifications
+// diverge or communication breaks down, freezing funds on-chain.
+export circuit disputeEscrow(
+    escrowId: Bytes<32>
+): [] {
+    escrowStates.insert(disclose(escrowId), 3); // 3 = DISPUTED
+}
+
+// ------------------------------------------------------------------------
+// Circuit: refundEscrow
+// ------------------------------------------------------------------------
+// Releases locked funds back to the client upon mutual consent or
+// resolution of a disputed milestone.
+export circuit refundEscrow(
+    escrowId: Bytes<32>
+): [] {
+    escrowStates.insert(disclose(escrowId), 4); // 4 = REFUNDED
+}
