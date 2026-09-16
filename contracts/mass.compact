@@ -142,5 +142,96 @@ module MidnightMass {
         return receiptCommitment;
     }
 
+    // ------------------------------------------------------------------------
+    // Circuit: proveTrackRecord (Zero-Knowledge NDA Provenance)
+    // ------------------------------------------------------------------------
+    // Allows an auditor to mathematically prove their track record meets
+    // or exceeds the client's criteria (minimum projects, minimum average
+    // quality rating, volume tier, domain specialization) WITHOUT disclosing
+    // any client identities, contract codebases, or settlement figures.
+    circuit proveTrackRecord(
+        witness historyRecord0: ProjectWitness,
+        witness historyRecord1: ProjectWitness,
+        witness historyRecord2: ProjectWitness,
+        witness historyRecord3: ProjectWitness,
+        witness historyRecord4: ProjectWitness,
+        threshold: ReputationThreshold,
+        auditorPkHash: Field
+    ): Field {
+        // Enforce non-zero auditor identity
+        assert(auditorPkHash != 0, "Auditor public key hash cannot be zero");
+        assert(threshold.minProjectCount > 0, "Threshold count must be at least 1");
+        assert(threshold.minAverageScore <= 100, "Threshold score cannot exceed 100");
+
+        let mut qualifyingCount: Uint32 = 0;
+        let mut totalScore: Uint32 = 0;
+
+        // Verify Record 0
+        if (historyRecord0.settled && historyRecord0.clientProofSig != 0) {
+            if (threshold.requiredDomain == 0 || historyRecord0.domain == threshold.requiredDomain) {
+                if (historyRecord0.volumeTier >= threshold.minVolumeTier) {
+                    qualifyingCount = qualifyingCount + 1;
+                    totalScore = totalScore + historyRecord0.qualityScore;
+                }
+            }
+        }
+
+        // Verify Record 1
+        if (historyRecord1.settled && historyRecord1.clientProofSig != 0) {
+            if (threshold.requiredDomain == 0 || historyRecord1.domain == threshold.requiredDomain) {
+                if (historyRecord1.volumeTier >= threshold.minVolumeTier) {
+                    qualifyingCount = qualifyingCount + 1;
+                    totalScore = totalScore + historyRecord1.qualityScore;
+                }
+            }
+        }
+
+        // Verify Record 2
+        if (historyRecord2.settled && historyRecord2.clientProofSig != 0) {
+            if (threshold.requiredDomain == 0 || historyRecord2.domain == threshold.requiredDomain) {
+                if (historyRecord2.volumeTier >= threshold.minVolumeTier) {
+                    qualifyingCount = qualifyingCount + 1;
+                    totalScore = totalScore + historyRecord2.qualityScore;
+                }
+            }
+        }
+
+        // Verify Record 3
+        if (historyRecord3.settled && historyRecord3.clientProofSig != 0) {
+            if (threshold.requiredDomain == 0 || historyRecord3.domain == threshold.requiredDomain) {
+                if (historyRecord3.volumeTier >= threshold.minVolumeTier) {
+                    qualifyingCount = qualifyingCount + 1;
+                    totalScore = totalScore + historyRecord3.qualityScore;
+                }
+            }
+        }
+
+        // Verify Record 4
+        if (historyRecord4.settled && historyRecord4.clientProofSig != 0) {
+            if (threshold.requiredDomain == 0 || historyRecord4.domain == threshold.requiredDomain) {
+                if (historyRecord4.volumeTier >= threshold.minVolumeTier) {
+                    qualifyingCount = qualifyingCount + 1;
+                    totalScore = totalScore + historyRecord4.qualityScore;
+                }
+            }
+        }
+
+        // Assert threshold conditions locally in circuit
+        assert(qualifyingCount >= threshold.minProjectCount, "Auditor does not meet minimum project threshold");
+        assert(totalScore >= threshold.minAverageScore * qualifyingCount, "Auditor does not meet average rating threshold");
+
+        // Compute verification receipt commitment
+        let receiptHash = hash(auditorPkHash, qualifyingCount, threshold.minAverageScore, threshold.requiredDomain);
+
+        // Disclose verified status to the public ledger
+        disclose(auditorPkHash);
+        disclose(receiptHash);
+        verifiedAuditorProofs.insert(auditorPkHash, receiptHash);
+        totalTrackRecordsVerified.increment(1);
+
+        return receiptHash;
+    }
+
 }
+
 
