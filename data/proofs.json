@@ -1,5 +1,31 @@
 [
   {
+    "receiptId": "mss_3023_7d92",
+    "receiptHash": "0x07d9fe7b099949a2966632d07228ee7c9ed8da307af21c72ac64561d6f54039e",
+    "auditorPk": "1bd4f827be97ff013c4a702e4b08f30ec378728a54670cf7cc92cb9b1a14eff6",
+    "domain": "Smart contract security",
+    "minProjects": 20,
+    "averageScore": 94.5,
+    "volumeTier": "$500,000+ Shielded Tier",
+    "timestamp": "September 16, 2026",
+    "blockHeight": 1733,
+    "txHash": "0x65a009f68f2daf4c76c676d7f96bc02a8ec8e4f15758a390ef69d1be3a825316",
+    "proofEngine": "Midnight Proof Server (Halo2 SNARK Engine)"
+  },
+  {
+    "receiptId": "mss_bc1c_dfe2",
+    "receiptHash": "0xd9e0f8cb9d0d21f8009767f1e49c11f6ae9ea250f94aa79e88c0024010852659",
+    "auditorPk": "1bd4f827be97ff013c4a702e4b08f30ec378728a54670cf7cc92cb9b1a14eff6",
+    "domain": "Smart contract security",
+    "minProjects": 20,
+    "averageScore": 94.5,
+    "volumeTier": "$500,000+ Shielded Tier",
+    "timestamp": "September 16, 2026",
+    "blockHeight": 1718,
+    "txHash": "0x768684e04e3edf61bec44c73faa1c739a93d7b1fd56a0e7ddcc95fbc3154e896",
+    "proofEngine": "Midnight Proof Server (Halo2 SNARK Engine)"
+  },
+  {
     "receiptId": "mss_8f3a_c21d",
     "receiptHash": "0x8f3ac21dbce09182374901bcda9019238471bcee910283471029384710293847",
     "auditorPk": "1bd4f827be97ff013c4a702e4b08f30ec378728a54670cf7cc92cb9b1a14eff6",
