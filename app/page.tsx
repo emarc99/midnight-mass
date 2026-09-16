@@ -1193,6 +1193,38 @@ function Settings({ nodeStatus }: { nodeStatus: any }) {
             <span className="status-dot" /> Online
           </div>
         </div>
+
+        <div className="settings-row">
+          <div>
+            <strong>Indexer GraphQL Explorer</strong>
+            <span>Interactive schema playground to query transactions, blocks &amp; contract state</span>
+          </div>
+          <a
+            href="http://localhost:8088/api/v4/graphql"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="button button-outline"
+            style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          >
+            Open GraphQL Explorer <ExternalLink size={14} />
+          </a>
+        </div>
+
+        <div className="settings-row">
+          <div>
+            <strong>Substrate Node Explorer (Polkadot.js)</strong>
+            <span>Live block visualizer &amp; extrinsics inspector connected to ws://127.0.0.1:9944</span>
+          </div>
+          <a
+            href="https://polkadot.js.org/apps/?rpc=ws%3A%2F%2F127.0.0.1%3A9944"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="button button-outline"
+            style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          >
+            Open Node Explorer <ExternalLink size={14} />
+          </a>
+        </div>
       </section>
     </>
   )
