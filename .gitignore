@@ -1,67 +1,30 @@
-# Node dependencies
+# Dependencies
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
 .pnpm-store/
+pnpm-lock.yaml
+pnpm-workspace.yaml
 
-# Build artifacts
+# Next.js build output
+.next/
 dist/
-dist-ssr/
-build/
-*.local
 out/
 
-# Compact compiler & proofs
-contracts/artifacts/
-*.bzk
-*.proof
-*.pk
-*.vk
-proof-cache/
-.compact/
+# Local databases & logs
+midnight-level-db/
+logs/
+*.log
 
-# Environment files
+# Environment variables
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env*.local
 
-# IDE & Editor files
-.vscode/*
-!.vscode/extensions.json
-!.vscode/settings.json
-.idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-.gemini/
-.claude/
-.agents/
+# Project blueprint (untracked per specification)
+BLUEPRINT.md
 
-# Docker and runtime volumes
-docker/data/
-docker/indexer-data/
-docker/node-data/
-
-# OS specific files
+# OS and sandbox files
 .DS_Store
 Thumbs.db
-desktop.ini
-
-# Python / Scratch files
-*.pyc
-__pycache__/
-*.py
-*.txt
-!requirements.txt
-!README.md
-
-# Blueprint and internal dev notes
-BLUEPRINT.md
-blueprint.md
-
+.vercel/
+.snowflake/
+.v0-trash/
+__v0_*
