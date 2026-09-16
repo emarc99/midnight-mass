@@ -5,7 +5,7 @@
 // A privacy-first protocol for confidential milestone escrow and
 // zero-knowledge proof of track record under NDA.
 
-pragma language_version >= 0.20;
+pragma language_version >= 0.23.0;
 
 import CompactStandardLibrary;
 
