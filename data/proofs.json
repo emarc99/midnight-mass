@@ -1,0 +1,28 @@
+[
+  {
+    "receiptId": "mss_8f3a_c21d",
+    "receiptHash": "0x8f3ac21dbce09182374901bcda9019238471bcee910283471029384710293847",
+    "auditorPk": "1bd4f827be97ff013c4a702e4b08f30ec378728a54670cf7cc92cb9b1a14eff6",
+    "domain": "Smart contract security & ZK circuits",
+    "minProjects": 25,
+    "averageScore": 96.8,
+    "volumeTier": "$500,000+ Shielded Tier",
+    "timestamp": "14 October 2026",
+    "blockHeight": 923,
+    "txHash": "0x00d4e587cd398330612e40b0f35b7ca5b8ec8e9cd789a61e5290ced31809788a18",
+    "proofEngine": "Midnight Proof Server / Halo2"
+  },
+  {
+    "receiptId": "mss_304d_5f27",
+    "receiptHash": "0xd55bee838fb5291b8b25a4df8707bbeacf5731c93d36d951f02c293ba209211b",
+    "auditorPk": "1bd4f827be97ff013c4a702e4b08f30ec378728a54670cf7cc92cb9b1a14eff6",
+    "domain": "Smart contract security",
+    "minProjects": 20,
+    "averageScore": 94.5,
+    "volumeTier": "$500,000+ Shielded Tier",
+    "timestamp": "September 16, 2026",
+    "blockHeight": 1226,
+    "txHash": "0xce0259cf55a2d055cd8a574ad50a2eaeecd99619c022f2caa12f8122af0e7700",
+    "proofEngine": "Midnight Proof Server (Halo2 SNARK Engine)"
+  }
+]

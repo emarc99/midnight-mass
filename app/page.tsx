@@ -1031,8 +1031,24 @@ function Verifier({ initialQuery }: { initialQuery?: string }) {
         </div>
 
         {error && (
-          <div style={{ marginTop: '16px', color: '#c53030', fontSize: '12px' }}>
-            {error}
+          <div
+            style={{
+              marginTop: '18px',
+              display: 'flex',
+              gap: '12px',
+              alignItems: 'center',
+              border: '1px solid #fecaca',
+              background: '#fef2f2',
+              padding: '14px',
+              borderRadius: '8px',
+              color: '#991b1b',
+            }}
+          >
+            <X size={20} color="#dc2626" style={{ flexShrink: 0 }} />
+            <div>
+              <strong style={{ display: 'block', fontSize: '12px' }}>Verification Rejected</strong>
+              <span style={{ fontSize: '11px', color: '#b91c1c' }}>{error}</span>
+            </div>
           </div>
         )}
 
@@ -1053,43 +1069,70 @@ function Verifier({ initialQuery }: { initialQuery?: string }) {
         )}
       </section>
 
-      <div className="verification-grid">
-        <div className="panel">
-          <span className="panel-kicker">What is mathematically proven</span>
-          <h2>{result ? `${result.minProjects}+ completed engagements` : '25+ completed engagements'}</h2>
-          <div className="result-stat">
-            <strong>{result ? result.averageScore : '96.8'}</strong>
-            <span>average quality score (out of 100)</span>
+      {result ? (
+        <div className="verification-grid">
+          <div className="panel">
+            <span className="panel-kicker">What is mathematically proven</span>
+            <h2>{result.minProjects}+ completed engagements</h2>
+            <div className="result-stat">
+              <strong>{result.averageScore}</strong>
+              <span>average quality score (out of 100)</span>
+            </div>
+            <div className="result-stat">
+              <strong>{result.volumeTier}</strong>
+              <span>shielded volume tier</span>
+            </div>
+            <div className="result-stat" style={{ borderBottom: 0 }}>
+              <span style={{ fontSize: '10px' }}>
+                Engine: {result.proofEngine || 'Midnight Proof Server / Halo2'}
+              </span>
+            </div>
           </div>
-          <div className="result-stat">
-            <strong>{result ? result.volumeTier : '$500k+'}</strong>
-            <span>shielded volume tier</span>
-          </div>
-          <div className="result-stat" style={{ borderBottom: 0 }}>
-            <span style={{ fontSize: '10px' }}>
-              Engine: {result?.proofEngine || 'Midnight Proof Server / Halo2'}
-            </span>
-          </div>
-        </div>
 
-        <div className="panel">
-          <span className="panel-kicker">What stays strictly private under NDA</span>
-          <div className="private-list">
-            <span>
-              <LockKeyhole size={16} /> Client identities &amp; corporate entities
-            </span>
-            <span>
-              <LockKeyhole size={16} /> Source code, repositories &amp; vulnerability findings
-            </span>
-            <span>
-              <LockKeyhole size={16} /> Exact compensation &amp; pricing agreements
-            </span>
-            <span>
-              <LockKeyhole size={16} /> Internal project timelines &amp; communications
-            </span>
+          <div className="panel">
+            <span className="panel-kicker">What stays strictly private under NDA</span>
+            <div className="private-list">
+              <span>
+                <LockKeyhole size={16} /> Client identities &amp; corporate entities
+              </span>
+              <span>
+                <LockKeyhole size={16} /> Source code, repositories &amp; vulnerability findings
+              </span>
+              <span>
+                <LockKeyhole size={16} /> Exact compensation &amp; pricing agreements
+              </span>
+              <span>
+                <LockKeyhole size={16} /> Internal project timelines &amp; communications
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="verification-grid">
+          <div className="panel" style={{ opacity: 0.85 }}>
+            <span className="panel-kicker">Ledger Verification Engine</span>
+            <h2>Enter a registered receipt ID</h2>
+            <p style={{ color: 'var(--muted)', fontSize: '12px', marginTop: '10px', lineHeight: 1.6 }}>
+              The verifier inspects genuine cryptographic proofs registered on the Midnight smart contract (e.g. <code>mss_8f3a_c21d</code> or <code>mss_304d_5f27</code>). Random or counterfeit IDs will be rejected.
+            </p>
+          </div>
+
+          <div className="panel" style={{ opacity: 0.85 }}>
+            <span className="panel-kicker">Protected Under NDA</span>
+            <div className="private-list" style={{ marginTop: '14px' }}>
+              <span>
+                <LockKeyhole size={16} /> Client identities never leave local storage
+              </span>
+              <span>
+                <LockKeyhole size={16} /> Zero proprietary audit findings leaked
+              </span>
+              <span>
+                <LockKeyhole size={16} /> Selective disclosure verified by Compact circuit
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
@@ -1233,41 +1276,7 @@ function Settings({ nodeStatus }: { nodeStatus: any }) {
 function Workspace({ onHome }: { onHome: () => void }) {
   const [active, setActive] = useState('overview')
   const [nodeStatus, setNodeStatus] = useState<any>(null)
-  const [escrows, setEscrows] = useState<any[]>([
-    {
-      id: 'MS-4F8A',
-      title: 'Protocol security review',
-      counterparty: 'Northstar Labs',
-      amount: '$48,000',
-      progress: 72,
-      status: 'In progress',
-      due: 'Oct 18',
-      commitment: '0x7c4e91a8f260381947b1029c7d4109fa7390bce217c4918e932bce194098319f',
-      blockHeight: 935,
-    },
-    {
-      id: 'MS-7B21',
-      title: 'ZK circuit audit',
-      counterparty: 'Confidential client',
-      amount: '$24,500',
-      progress: 100,
-      status: 'Ready to settle',
-      due: 'Today',
-      commitment: '0x102d86530b37e0d4bf6057c68a060e7c208849b0a4c37a6c88385a0dba9b927a',
-      blockHeight: 960,
-    },
-    {
-      id: 'MS-91C0',
-      title: 'Formal verification sprint',
-      counterparty: 'Aster Protocol',
-      amount: '$18,750',
-      progress: 34,
-      status: 'In progress',
-      due: 'Nov 02',
-      commitment: '0x391c019283471029384710293847102938471029384710293847102938471029',
-      blockHeight: 980,
-    },
-  ])
+  const [escrows, setEscrows] = useState<any[]>([])
   const [lastGeneratedReceipt, setLastGeneratedReceipt] = useState<string>('')
 
   // Poll node status
@@ -1299,7 +1308,10 @@ function Workspace({ onHome }: { onHome: () => void }) {
   useEffect(() => {
     fetchStatus()
     fetchEscrows()
-    const interval = setInterval(fetchStatus, 8000)
+    const interval = setInterval(() => {
+      fetchStatus()
+      fetchEscrows()
+    }, 5000)
     return () => clearInterval(interval)
   }, [])
 

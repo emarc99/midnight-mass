@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,21 +19,34 @@ interface ProofRecord {
   proofEngine: string;
 }
 
-const verifiedProofs: Record<string, ProofRecord> = {
-  'mss_8f3a_c21d': {
-    receiptId: 'mss_8f3a_c21d',
-    receiptHash: '0x8f3ac21dbce09182374901bcda9019238471bcee910283471029384710293847',
-    auditorPk: '1bd4f827be97ff013c4a702e4b08f30ec378728a54670cf7cc92cb9b1a14eff6',
-    domain: 'Smart contract security & ZK circuits',
-    minProjects: 25,
-    averageScore: 96.8,
-    volumeTier: '$500,000+',
-    timestamp: '14 October 2026',
-    blockHeight: 923,
-    txHash: '0x00d4e587cd398330612e40b0f35b7ca5b8ec8e9cd789a61e5290ced31809788a18',
-    proofEngine: 'Midnight Proof Server / Halo2',
-  },
-};
+function getProofsFilePath() {
+  return path.resolve(process.cwd(), 'data', 'proofs.json');
+}
+
+function loadProofs(): ProofRecord[] {
+  try {
+    const filePath = getProofsFilePath();
+    if (fs.existsSync(filePath)) {
+      return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    }
+  } catch (e) {
+    // ignore
+  }
+  return [];
+}
+
+function saveProofs(proofs: ProofRecord[]) {
+  try {
+    const filePath = getProofsFilePath();
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(filePath, JSON.stringify(proofs, null, 2), 'utf-8');
+  } catch (e) {
+    // ignore
+  }
+}
 
 export async function POST(req: Request) {
   try {
@@ -48,7 +63,7 @@ export async function POST(req: Request) {
     }
 
     // Get live block height
-    let currentBlock = 1105;
+    let currentBlock = 1465;
     try {
       const res = await fetch('http://127.0.0.1:9944', {
         method: 'POST',
@@ -89,9 +104,9 @@ export async function POST(req: Request) {
       proofEngine: proofServerOk ? 'Midnight Proof Server (Halo2 SNARK Engine)' : 'Halo2 Proof Engine (Optimized WebAssembly)',
     };
 
-    verifiedProofs[receiptId] = newRecord;
-    verifiedProofs[receiptHash] = newRecord;
-    verifiedProofs[newRecord.auditorPk] = newRecord;
+    const proofs = loadProofs();
+    proofs.unshift(newRecord);
+    saveProofs(proofs);
 
     return NextResponse.json({
       success: true,
@@ -111,34 +126,18 @@ export async function GET(req: Request) {
     return NextResponse.json({ success: false, error: 'Query parameter "q" is required' }, { status: 400 });
   }
 
-  // Exact or prefix match
-  let found = verifiedProofs[query];
-  if (!found) {
-    // Try fuzzy match
-    const key = Object.keys(verifiedProofs).find(
-      (k) => k.toLowerCase() === query.toLowerCase() || k.includes(query.replace(/[\s_]/g, ''))
-    );
-    if (key) found = verifiedProofs[key];
-  }
+  const proofs = loadProofs();
+  const queryLower = query.toLowerCase();
 
-  // If still not found, check if it looks like an auditor PK or receipt
-  if (!found && (query.startsWith('mss_') || query.startsWith('0x') || query.length >= 16)) {
-    // Auto-generate verified state for demo query
-    found = {
-      receiptId: query.startsWith('mss_') ? query : `mss_${query.slice(0, 8)}`,
-      receiptHash: query.startsWith('0x') ? query : `0x${crypto.createHash('sha256').update(query).digest('hex')}`,
-      auditorPk: '1bd4f827be97ff013c4a702e4b08f30ec378728a54670cf7cc92cb9b1a14eff6',
-      domain: 'Smart contract security & formal verification',
-      minProjects: 25,
-      averageScore: 96.8,
-      volumeTier: '$500k+ Shielded Volume',
-      timestamp: 'Verified on Midnight Ledger',
-      blockHeight: 1110,
-      txHash: '0x' + crypto.randomBytes(32).toString('hex'),
-      proofEngine: 'Halo2 / Midnight Proof Server v8',
-    };
-    verifiedProofs[query] = found;
-  }
+  // Strict match against genuine receipts
+  const found = proofs.find((p) => {
+    return (
+      p.receiptId.toLowerCase() === queryLower ||
+      p.receiptHash.toLowerCase() === queryLower ||
+      p.auditorPk.toLowerCase() === queryLower ||
+      p.receiptId.toLowerCase().replace(/_/g, '') === queryLower.replace(/_/g, '')
+    );
+  });
 
   if (found) {
     return NextResponse.json({
@@ -152,6 +151,6 @@ export async function GET(req: Request) {
   return NextResponse.json({
     success: false,
     verified: false,
-    error: 'No credential matching this ID was found on the ledger.',
+    error: `Verification Failed: No cryptographic credential matching "${query}" exists on the Midnight ledger.`,
   });
 }
