@@ -75,4 +75,32 @@ module MidnightMass {
         requiredDomain: Uint32;
     }
 
+    // ------------------------------------------------------------------------
+    // Circuit: createEscrow
+    // ------------------------------------------------------------------------
+    // Locks a milestone commitment onto the ledger. The monetary amount and
+    // confidential project specifications remain completely hidden inside
+    // the witness; only the unique commitment hash is disclosed to the ledger.
+    circuit createEscrow(witness terms: EscrowTerms): Field {
+        // Enforce basic cryptographic and business logic invariants locally
+        assert(terms.milestoneAmount > 0, "Milestone amount must be strictly greater than zero");
+        assert(terms.clientPkHash != 0, "Invalid client public key hash");
+        assert(terms.auditorPkHash != 0, "Invalid auditor public key hash");
+        assert(terms.specHash != 0, "Deliverable specification hash required");
+
+        // Compute blinded commitment hash over terms
+        let escrowId = hash(terms.clientPkHash, terms.auditorPkHash, terms.specHash, terms.salt);
+
+        // Ensure commitment does not collide with existing initialized escrow
+        let currentStatus = escrowStates.lookup(escrowId);
+        assert(currentStatus == 0, "Escrow commitment already exists on-chain");
+
+        // Disclose the escrowId to update public ledger state
+        disclose(escrowId);
+        escrowStates.insert(escrowId, 1); // EscrowStatus.ACTIVE
+        totalEscrowsCreated.increment(1);
+
+        return escrowId;
+    }
+
 }
