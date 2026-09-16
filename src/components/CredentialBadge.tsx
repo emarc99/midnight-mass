@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { VerificationReceipt } from '../types';
-import { ShieldCheck, Check, Sparkles, ExternalLink, Lock } from 'lucide-react';
+import { ShieldCheck, Lock } from 'lucide-react';
 
 interface CredentialBadgeProps {
   receipt: VerificationReceipt;

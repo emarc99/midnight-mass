@@ -60,3 +60,8 @@ __pycache__/
 *.txt
 !requirements.txt
 !README.md
+
+# Blueprint and internal dev notes
+BLUEPRINT.md
+blueprint.md
+

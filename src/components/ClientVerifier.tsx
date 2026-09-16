@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { VerificationReceipt } from '../types';
 import { CredentialBadge } from './CredentialBadge';
-import { Search, ShieldAlert, FileSearch, CheckCircle2, Lock } from 'lucide-react';
+import { Search, FileSearch } from 'lucide-react';
 
 interface ClientVerifierProps {
   initialReceipts: VerificationReceipt[];

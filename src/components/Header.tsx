@@ -2,7 +2,7 @@
 // Copyright 2026 Midnight MASS Contributors
 
 import React from 'react';
-import { Shield, Lock, FileCheck2, Wallet, ExternalLink } from 'lucide-react';
+import { Shield, Lock, FileCheck2, Wallet } from 'lucide-react';
 
 interface HeaderProps {
   activeTab: 'auditor' | 'client';

@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { EscrowRecord, EscrowStatus } from '../types';
 import { NewEscrowModal } from './NewEscrowModal';
-import { ShieldCheck, Plus, CheckCircle2, Clock, AlertCircle, Lock, ExternalLink } from 'lucide-react';
+import { ShieldCheck, Plus, CheckCircle2, Lock } from 'lucide-react';
 
 interface EscrowManagerProps {
   escrows: EscrowRecord[];

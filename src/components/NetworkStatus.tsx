@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { midnightClient } from '../services/midnight-client';
-import { Activity, Server, Database, Cpu, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Server, Database, Cpu } from 'lucide-react';
 
 export const NetworkStatus: React.FC = () => {
   const [health, setHealth] = useState({ node: true, indexer: true, proofServer: true });

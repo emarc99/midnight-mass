@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { ProjectWitness, AuditDomain, ReputationThreshold, VerificationReceipt } from '../types';
 import { proofService, ProofGenerationStep } from '../services/proof-service';
 import { midnightClient } from '../services/midnight-client';
-import { Shield, Sparkles, Check, AlertTriangle, EyeOff, Lock, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Sparkles, AlertTriangle, EyeOff, Lock, CheckCircle2 } from 'lucide-react';
 
 interface TrackRecordProverProps {
   witnesses: ProjectWitness[];
