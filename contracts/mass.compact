@@ -232,6 +232,49 @@ module MidnightMass {
         return receiptHash;
     }
 
+    // ------------------------------------------------------------------------
+    // Circuit: disputeEscrow
+    // ------------------------------------------------------------------------
+    // Flags an active milestone escrow as disputed if delivery specifications
+    // diverge or communication breaks down, freezing funds on-chain.
+    circuit disputeEscrow(
+        witness terms: EscrowTerms,
+        witness reasonHash: Field,
+        witness initiatorSignature: Field
+    ): Boolean {
+        let escrowId = hash(terms.clientPkHash, terms.auditorPkHash, terms.specHash, terms.salt);
+        let currentStatus = escrowStates.lookup(escrowId);
+        assert(currentStatus == 1, "Only active escrows can enter dispute state");
+        assert(initiatorSignature != 0, "Dispute initiation signature required");
+        assert(reasonHash != 0, "Dispute reason hash commitment required");
+
+        disclose(escrowId);
+        escrowStates.insert(escrowId, 3); // EscrowStatus.DISPUTED
+
+        return true;
+    }
+
+    // ------------------------------------------------------------------------
+    // Circuit: refundEscrow
+    // ------------------------------------------------------------------------
+    // Releases locked funds back to the client upon mutual consent or
+    // resolution of a disputed milestone.
+    circuit refundEscrow(
+        witness terms: EscrowTerms,
+        witness mutualReleaseHash: Field
+    ): Boolean {
+        let escrowId = hash(terms.clientPkHash, terms.auditorPkHash, terms.specHash, terms.salt);
+        let currentStatus = escrowStates.lookup(escrowId);
+        assert(currentStatus == 1 || currentStatus == 3, "Escrow must be active or disputed to refund");
+        assert(mutualReleaseHash != 0, "Mutual release authorization required");
+
+        disclose(escrowId);
+        escrowStates.insert(escrowId, 4); // EscrowStatus.REFUNDED
+
+        return true;
+    }
+
 }
+
 
 

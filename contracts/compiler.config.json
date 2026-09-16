@@ -1,0 +1,18 @@
+{
+  "contractName": "MidnightMass",
+  "version": "1.0.0",
+  "source": "contracts/mass.compact",
+  "compilerVersion": "0.18.0",
+  "target": "halo2-plonk",
+  "outputDirectory": "contracts/artifacts",
+  "optimizations": {
+    "circuitPruning": true,
+    "constraintCompression": true
+  },
+  "localDev": {
+    "networkId": "undeployed",
+    "proofServer": "http://localhost:6300",
+    "indexer": "http://localhost:8088/api/v4/graphql",
+    "node": "ws://localhost:9944"
+  }
+}
